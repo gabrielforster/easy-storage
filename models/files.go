@@ -5,9 +5,9 @@ import (
 )
 
 type File struct {
-	Name        string
-	ContentType string
-	Content     []byte
+	Name         string
+	ContentType  string
+	Content      []byte
 	LastModified time.Time
+	Metadata     map[string]string
 }
-

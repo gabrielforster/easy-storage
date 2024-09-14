@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	// "path/filepath"
@@ -46,7 +47,14 @@ func main() {
 			return
 		}
 
-		err = localStorage.Upload(context.Background(), key, file, handler.Filename)
+    metadata := make(map[string]string)
+    for k, v := range r.Form {
+      if strings.HasPrefix(k, "metadata-") {
+				metadata[k[9:]] = v[0]
+			}
+    }
+
+		err = localStorage.Upload(context.Background(), key, file, handler.Filename, metadata)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -68,6 +76,10 @@ func main() {
 
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.Name))
 		w.Header().Set("Content-Type", file.ContentType)
+
+    for k, v := range file.Metadata {
+      w.Header().Set(k, v)
+    }
 
     bufReader := bytes.NewReader(file.Content)
 		http.ServeContent(w, r, file.Name, file.LastModified, bufReader)
