@@ -12,7 +12,7 @@ import (
 // estabilished connection
 type TCPPeer struct {
 	// The peer connection it self. TCP in this case
-  net.Conn
+	net.Conn
 
 	// if accepted and retrieved => true
 	// if dialed and retrieved => false
@@ -103,7 +103,7 @@ func (t *TCPTransport) handleConn(conn net.Conn, isOutbound bool) {
 	var err error
 
 	defer func() {
-		fmt.Printf("dropping peer conn: %+v", err)
+		fmt.Printf("dropping peer conn: %+v\n", err)
 		conn.Close()
 	}()
 
