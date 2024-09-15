@@ -163,3 +163,7 @@ func (s *Storage) Delete(key string) error {
 
 	return nil
 }
+
+func (s *Storage) Close() error {
+  return os.RemoveAll(s.Options.Root)
+}

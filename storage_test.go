@@ -22,11 +22,25 @@ func TestPathTransformFunc(t *testing.T) {
   }
 }
 
-func TestStorage(t *testing.T) {
+func newStorage () *Storage {
 	options := StorageOptions{
 		PathTransformFunc: CASPathTransformFunc,
 	}
 	storage := NewStorage(options)
+
+  return storage
+}
+
+func teardown (t *testing.T, s *Storage) {
+  if err := s.Close(); err != nil {
+    t.Error(err)
+  }
+}
+
+func TestStorage(t *testing.T) {
+  storage := newStorage()
+  defer teardown(t, storage)
+
   key := "testkey"
   data := []byte("a big file here")
 	if err := storage.writeStream(key, bytes.NewReader(data)); err != nil {
@@ -47,10 +61,9 @@ func TestStorage(t *testing.T) {
 }
 
 func TestStorageDeleteKey(t *testing.T) {
-	options := StorageOptions{
-		PathTransformFunc: CASPathTransformFunc,
-	}
-	storage := NewStorage(options)
+	storage := newStorage()
+  defer teardown(t, storage)
+
   key := "testkey"
   data := []byte("a big file here")
 	if err := storage.writeStream(key, bytes.NewReader(data)); err != nil {
