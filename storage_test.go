@@ -47,6 +47,10 @@ func TestStorage(t *testing.T) {
 		t.Error(err)
 	}
 
+  if ok := storage.Has(key); !ok {
+    t.Errorf("expect (%s) to exist", key)
+  }
+
   r, err := storage.Read(key)
   if err != nil {
     t.Error(err)
@@ -58,19 +62,12 @@ func TestStorage(t *testing.T) {
   }
 
   fmt.Println(string(b))
-}
-
-func TestStorageDeleteKey(t *testing.T) {
-	storage := newStorage()
-  defer teardown(t, storage)
-
-  key := "testkey"
-  data := []byte("a big file here")
-	if err := storage.writeStream(key, bytes.NewReader(data)); err != nil {
-		t.Error(err)
-	}
 
   if err := storage.Delete(key); err != nil {
     t.Error(err)
+  }
+
+  if ok := storage.Has(key); ok {
+    t.Errorf("expect (%s) to not exist", key)
   }
 }
