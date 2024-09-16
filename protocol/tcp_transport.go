@@ -95,7 +95,8 @@ func (t *TCPTransport) ListenAndAccept() error {
 
 	go t.startAcceptLoop()
 
-	log.Printf("TCP transport listening on port: %s\n", t.Options.ListenAddr)
+  log.Printf("TCP listening on port %s", t.Options.ListenAddr)
+
 	return nil
 }
 
@@ -147,7 +148,6 @@ func (t *TCPTransport) startAcceptLoop() {
 		if errors.Is(err, net.ErrClosed) {
 			return
 		}
-
 		if err != nil {
 			fmt.Printf("TCP accept error: %s\n", err)
 		}
