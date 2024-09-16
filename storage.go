@@ -51,15 +51,15 @@ func (p PathKey) FullPath() string {
 	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
 }
 
-func (p PathKey) FirstPathSegment () string {
-  firstSegment := strings.Split(p.FullPath(), "/")[0]
+func (p PathKey) FirstPathSegment() string {
+	firstSegment := strings.Split(p.FullPath(), "/")[0]
 
-  // if len(firstSegment) == 0, something is wrong on the system
-  if len(firstSegment) == 0 {
-    return ""
-  }
+	// if len(firstSegment) == 0, something is wrong on the system
+	if len(firstSegment) == 0 {
+		return ""
+	}
 
-  return firstSegment
+	return firstSegment
 }
 
 type StorageOptions struct {
@@ -72,33 +72,37 @@ type Storage struct {
 }
 
 func NewStorage(options StorageOptions) *Storage {
-  if options.PathTransformFunc == nil {
-    options.PathTransformFunc = DumbPathTransformFunc
-  }
+	if options.PathTransformFunc == nil {
+		options.PathTransformFunc = DumbPathTransformFunc
+	}
 
-  if len(options.Root) == 0 {
-    options.Root = DefaultRootFolderName
-  }
+	if len(options.Root) == 0 {
+		options.Root = DefaultRootFolderName
+	}
 
 	return &Storage{
 		Options: options,
 	}
 }
 
+func (s *Storage) Write(key string, r io.Reader) error {
+	return s.writeStream(key, r)
+}
+
 func (s *Storage) writeStream(key string, r io.Reader) error {
 	pathKey := s.Options.PathTransformFunc(key)
-  pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathKey.PathName)
+	pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathKey.PathName)
 
 	if err := os.MkdirAll(pathWithRoot, os.ModePerm); err != nil {
 		return err
 	}
 
 	pathAndFilename := pathKey.FullPath()
-  pathAndFilenameWithRoot := fmt.Sprintf(
-    "%s/%s",
-    s.Options.Root,
-    pathAndFilename,
-  )
+	pathAndFilenameWithRoot := fmt.Sprintf(
+		"%s/%s",
+		s.Options.Root,
+		pathAndFilename,
+	)
 
 	f, err := os.Create(pathAndFilenameWithRoot)
 	if err != nil {
@@ -131,14 +135,14 @@ func (s *Storage) Read(key string) (io.Reader, error) {
 
 func (s *Storage) readStream(key string) (io.ReadCloser, error) {
 	pathKey := s.Options.PathTransformFunc(key)
-  pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathKey.FullPath())
+	pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathKey.FullPath())
 	return os.Open(pathWithRoot)
 }
 
 // todo improve this to be more assertive
 func (s *Storage) Has(key string) bool {
 	pathKey := s.Options.PathTransformFunc(key)
-  pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathKey.FullPath())
+	pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathKey.FullPath())
 
 	_, err := os.Stat(pathWithRoot)
 	return !errors.Is(err, os.ErrNotExist)
@@ -151,12 +155,12 @@ func (s *Storage) Delete(key string) error {
 		log.Printf("deleted (%s) from disk)", pathKey.Filename)
 	}()
 
-  // todo change this
-  // (this will delete more than 1 file if the first segment
-  // of their paths are the same...)
-  pathToRemove := pathKey.FirstPathSegment()
+	// todo change this
+	// (this will delete more than 1 file if the first segment
+	// of their paths are the same...)
+	pathToRemove := pathKey.FirstPathSegment()
 
-  pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathToRemove)
+	pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathToRemove)
 	if err := os.RemoveAll(pathWithRoot); err != nil {
 		return err
 	}
@@ -165,5 +169,5 @@ func (s *Storage) Delete(key string) error {
 }
 
 func (s *Storage) Close() error {
-  return os.RemoveAll(s.Options.Root)
+	return os.RemoveAll(s.Options.Root)
 }

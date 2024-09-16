@@ -1,38 +1,34 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"time"
 
 	"github.com/gabrielforster/easy-storage/protocol"
 )
 
 func main() {
-	options := protocol.TCPTransportOptions{
+	tcpTransportOptions := protocol.TCPTransportOptions{
 		ListenAddr:    ":3000",
 		HandShakeFunc: protocol.DumbHandShakeFunc,
 		Decoder:       protocol.DefaultDecoder{},
-		OnPeer:        HandlePeer,
+		// todo add OnPeer function
+	}
+	tcpTransport := protocol.NewTCPTranport(tcpTransportOptions)
+
+	fileServerOptions := FileServerOptions{
+		StorageRoot:       "root_folder",
+		PathTransformFunc: CASPathTransformFunc,
+		Transport:         *tcpTransport,
 	}
 
-	transport := protocol.NewTCPTranport(options)
-
+	server := NewFileServer(fileServerOptions)
 	go func() {
-		for {
-			msg := <-transport.Consume()
-			fmt.Printf("new message: %+v\n", msg)
-			payloadAsString := string(msg.Payload)
-			fmt.Printf("string from message.Payload: %+v\n", payloadAsString)
-		}
+    time.Sleep(time.Second * 3)
+    server.Stop()
 	}()
 
-	if err := transport.ListenAndAccept(); err != nil {
+	if err := server.Start(); err != nil {
 		log.Fatal(err)
 	}
-
-	select {}
-}
-func HandlePeer(peer protocol.Peer) error {
-  fmt.Println("logic on OnPeer outside tcp transport")
-	return nil
 }
