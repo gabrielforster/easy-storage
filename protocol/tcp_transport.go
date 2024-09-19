@@ -44,15 +44,15 @@ type TCPTransportOptions struct {
 }
 
 type TCPTransport struct {
-	Options    TCPTransportOptions
+	TCPTransportOptions
 	listener   net.Listener
 	rpcChannel chan RPC
 }
 
 func NewTCPTranport(options TCPTransportOptions) *TCPTransport {
 	return &TCPTransport{
-		Options:    options,
-		rpcChannel: make(chan RPC, 1024),
+		TCPTransportOptions: options,
+		rpcChannel:          make(chan RPC, 1024),
 	}
 }
 
@@ -60,7 +60,7 @@ func NewTCPTranport(options TCPTransportOptions) *TCPTransport {
 // returns the address.
 // transport is accepting new connections.
 func (t *TCPTransport) Addr() string {
-	return t.Options.ListenAddr
+	return t.ListenAddr
 }
 
 // Consume implements the Transport interface, returns a read-only
@@ -88,14 +88,14 @@ func (t *TCPTransport) Dial(addr string) error {
 func (t *TCPTransport) ListenAndAccept() error {
 	var err error
 
-	t.listener, err = net.Listen("tcp", t.Options.ListenAddr)
+	t.listener, err = net.Listen("tcp", t.ListenAddr)
 	if err != nil {
 		return err
 	}
 
 	go t.startAcceptLoop()
 
-  log.Printf("TCP listening on port %s", t.Options.ListenAddr)
+	log.Printf("TCP listening on port %s", t.ListenAddr)
 
 	return nil
 }
@@ -110,12 +110,12 @@ func (t *TCPTransport) handleConn(conn net.Conn, isOutbound bool) {
 
 	peer := NewTCPPeer(conn, isOutbound)
 
-	if err = t.Options.HandShakeFunc(peer); err != nil {
+	if err = t.HandShakeFunc(peer); err != nil {
 		return
 	}
 
-	if t.Options.OnPeer != nil {
-		if err = t.Options.OnPeer(peer); err != nil {
+	if t.OnPeer != nil {
+		if err = t.OnPeer(peer); err != nil {
 			return
 		}
 	}
@@ -123,7 +123,7 @@ func (t *TCPTransport) handleConn(conn net.Conn, isOutbound bool) {
 	// Read loop
 	for {
 		rpc := RPC{}
-		err = t.Options.Decoder.Decode(conn, &rpc)
+		err = t.Decoder.Decode(conn, &rpc)
 		if err != nil {
 			return
 		}
