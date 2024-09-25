@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"encoding/gob"
-	"fmt"
 	"io"
 )
 
@@ -24,11 +23,6 @@ func (dec DefaultDecoder) Decode(r io.Reader, msg *RPC) error {
 		return nil
 	}
 
-	close := peekBuf[0] == CloseConn
-	if close {
-		return fmt.Errorf("connection closed from peer")
-	}
-
 	// In case of a stream we are not decoding what is being sent over the network.
 	// We are just setting Stream true so we can handle that in our logic.
 	stream := peekBuf[0] == IncomingStream
@@ -47,3 +41,4 @@ func (dec DefaultDecoder) Decode(r io.Reader, msg *RPC) error {
 
 	return nil
 }
+

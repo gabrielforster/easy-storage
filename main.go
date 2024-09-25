@@ -17,6 +17,7 @@ func genServer(listenAddr string, nodes ...string) *FileServer {
 	tcpTransport := protocol.NewTCPTranport(tcpTransportOptions)
 
 	fileServerOptions := FileServerOptions{
+    EncKey:            newEncryptionKey(),
 		StorageRoot:       listenAddr + "_root_folder",
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
@@ -44,7 +45,9 @@ func main() {
 	time.Sleep(2 * time.Second)
 
 	data := bytes.NewReader([]byte("my big data here"))
-	s2.StoreData("key", data)
+  if err := s2.StoreData("thisisakey", data); err != nil {
+    log.Panic(err)
+  }
 
 	select {}
 }
