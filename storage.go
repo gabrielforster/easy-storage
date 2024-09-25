@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
@@ -85,87 +84,78 @@ func NewStorage(options StorageOptions) *Storage {
 	}
 }
 
-func (s *Storage) Write(key string, r io.Reader) error {
-	return s.writeStream(key, r)
+func (s *Storage) Write(id string, key string, r io.Reader) (int64, error) {
+	return s.writeStream(id, key, r)
 }
 
-func (s *Storage) writeStream(key string, r io.Reader) error {
+func (s *Storage) WriteDecrypt(encKey []byte, id string, key string, r io.Reader) (int64, error) {
+	f, err := s.openFileForWriting(id, key)
+	if err != nil {
+		return 0, err
+	}
+	n, err := copyDecrypt(encKey, r, f)
+	return int64(n), err
+}
+
+func (s *Storage) openFileForWriting(id string, key string) (*os.File, error) {
 	pathKey := s.Options.PathTransformFunc(key)
-	pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathKey.PathName)
-
-	if err := os.MkdirAll(pathWithRoot, os.ModePerm); err != nil {
-		return err
-	}
-
-	pathAndFilename := pathKey.FullPath()
-	pathAndFilenameWithRoot := fmt.Sprintf(
-		"%s/%s",
-		s.Options.Root,
-		pathAndFilename,
-	)
-
-	f, err := os.Create(pathAndFilenameWithRoot)
-	if err != nil {
-		return err
-	}
-
-	n, err := io.Copy(f, r)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("written (%d) bytes to disk: %s\n", n, pathAndFilename)
-
-	return nil
-}
-
-func (s *Storage) Read(key string) (io.Reader, error) {
-	f, err := s.readStream(key)
-	if err != nil {
+	pathNameWithRoot := fmt.Sprintf("%s/%s/%s", s.Options.Root, id, pathKey.PathName)
+	if err := os.MkdirAll(pathNameWithRoot, os.ModePerm); err != nil {
 		return nil, err
 	}
 
-	defer f.Close()
+	fullPathWithRoot := fmt.Sprintf("%s/%s/%s", s.Options.Root, id, pathKey.FullPath())
 
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, f)
-
-	return buf, err
+	return os.Create(fullPathWithRoot)
 }
 
-func (s *Storage) readStream(key string) (io.ReadCloser, error) {
-	pathKey := s.Options.PathTransformFunc(key)
-	pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathKey.FullPath())
-	return os.Open(pathWithRoot)
+func (s *Storage) writeStream(id string, key string, r io.Reader) (int64, error) {
+	f, err := s.openFileForWriting(id, key)
+	if err != nil {
+		return 0, err
+	}
+	return io.Copy(f, r)
 }
 
-// todo improve this to be more assertive
-func (s *Storage) Has(key string) bool {
+func (s *Storage) Has(id, key string) bool {
 	pathKey := s.Options.PathTransformFunc(key)
-	pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathKey.FullPath())
+	fullPathWithRoot := fmt.Sprintf("%s/%s/%s", s.Options.Root, id, pathKey.FullPath())
 
-	_, err := os.Stat(pathWithRoot)
+	_, err := os.Stat(fullPathWithRoot)
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-func (s *Storage) Delete(key string) error {
+func (s *Storage) Delete(id string, key string) error {
 	pathKey := s.Options.PathTransformFunc(key)
 
 	defer func() {
-		log.Printf("deleted (%s) from disk)", pathKey.Filename)
+		log.Printf("deleted [%s] from disk", pathKey.Filename)
 	}()
 
-	// todo change this
-	// (this will delete more than 1 file if the first segment
-	// of their paths are the same...)
-	pathToRemove := pathKey.FirstPathSegment()
+	firstPathNameWithRoot := fmt.Sprintf("%s/%s/%s", s.Options.Root, id, pathKey.FirstPathSegment())
 
-	pathWithRoot := fmt.Sprintf("%s/%s", s.Options.Root, pathToRemove)
-	if err := os.RemoveAll(pathWithRoot); err != nil {
-		return err
+	return os.RemoveAll(firstPathNameWithRoot)
+}
+
+func (s *Storage) Read(id string, key string) (int64, io.Reader, error) {
+	return s.readStream(id, key)
+}
+
+func (s *Storage) readStream(id string, key string) (int64, io.ReadCloser, error) {
+	pathKey := s.Options.PathTransformFunc(key)
+	fullPathWithRoot := fmt.Sprintf("%s/%s/%s", s.Options.Root, id, pathKey.FullPath())
+
+	file, err := os.Open(fullPathWithRoot)
+	if err != nil {
+		return 0, nil, err
 	}
 
-	return nil
+	fi, err := file.Stat()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return fi.Size(), file, nil
 }
 
 func (s *Storage) Close() error {

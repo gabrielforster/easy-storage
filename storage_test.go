@@ -39,19 +39,20 @@ func teardown(t *testing.T, s *Storage) {
 
 func TestStorage(t *testing.T) {
 	storage := newStorage()
-	defer teardown(t, storage)
+  defer teardown(t, storage)
 
 	key := "testkey"
+  id := generateID()
 	data := []byte("a big file here")
-	if err := storage.writeStream(key, bytes.NewReader(data)); err != nil {
+	if _, err := storage.writeStream(id, key, bytes.NewReader(data)); err != nil {
 		t.Error(err)
 	}
 
-	if ok := storage.Has(key); !ok {
+	if ok := storage.Has(id, key); !ok {
 		t.Errorf("expect (%s) to exist", key)
 	}
 
-	r, err := storage.Read(key)
+	_, r, err := storage.Read(id, key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -63,11 +64,11 @@ func TestStorage(t *testing.T) {
 
 	fmt.Println(string(b))
 
-	if err := storage.Delete(key); err != nil {
+	if err := storage.Delete(id, key); err != nil {
 		t.Error(err)
 	}
 
-	if ok := storage.Has(key); ok {
+	if ok := storage.Has(id, key); ok {
 		t.Errorf("expect (%s) to not exist", key)
 	}
 }
